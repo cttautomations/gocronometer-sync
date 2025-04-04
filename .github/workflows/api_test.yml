@@ -1,0 +1,35 @@
+name: API Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    # this will run at 11pm UTC every Monday (you can change this)
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.13
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Tidy Go Modules
+        run: go mod tidy
+
+      - name: Test
+        env:
+          GOCRONOMETER_TEST_USERNAME: ${{ secrets.GOCRONOMETER_TEST_USERNAME }}
+          GOCRONOMETER_TEST_PASSWORD: ${{ secrets.GOCRONOMETER_TEST_PASSWORD }}
+        run: go test -v -run TestClient_ExportExercises

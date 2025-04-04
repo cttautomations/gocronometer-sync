@@ -1,0 +1,41 @@
+name: Cronometer Sync
+
+on:
+  schedule:
+    # Run at 11am, 5pm, 11pm EST (which is 15, 21, 3 UTC)
+    - cron: '0 15,21,3 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Tidy Go modules
+        run: go mod tidy
+
+      - name: Build gocronometer
+        run: go build -o gocronometer ./cmd/gocronometer/main.go
+
+      - name: Make binary executable
+        run: chmod +x ./gocronometer
+
+      - name: Run Cronometer export
+        env:
+          CRONOMETER_USERNAME: ${{ secrets.CRONOMETER_USERNAME }}
+          CRONOMETER_PASSWORD: ${{ secrets.CRONOMETER_PASSWORD }}
+        run: ./gocronometer > export.json
+
+      - name: Send to n8n webhook
+        run: |
+          curl -X POST https://cttautomations.app.n8n.cloud/webhook/crono-sync \
+            -H "Content-Type: application/json" \
+            --data @export.json
